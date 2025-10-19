@@ -9,18 +9,19 @@ import (
 	"log"
 	"os"
 	"path/filepath"
+	"strconv"
 	"time"
 )
 
 type FileHash struct {
-    FilePath string `json:"filepath"`
+    Path string `json:"path"`
     Hash     string `json:"hash"`
 }
 
 type Commit struct {
     ID int `json:"id"`
     Description string   `json:"description"`
-    Hashes      []FileHash `json:"file_hash"`
+    FileHash      []FileHash `json:"file_hash"`
     Timestamp   string   `json:"timestamp"`
 }
 
@@ -134,7 +135,7 @@ func commits(description string, fileHashes []FileHash) error {
     } else { 
         committed := make(map[string]struct{})
         for _, commit := range commits {
-            for _, cf := range commit.Hashes { 
+            for _, cf := range commit.FileHash { 
                 committed[cf.Hash] = struct{}{}
             }
         }
@@ -161,7 +162,7 @@ func commits(description string, fileHashes []FileHash) error {
     newCommit := Commit{
         ID : newID,
         Description: description,
-        Hashes:      filteredFileHashes,
+        FileHash:      filteredFileHashes,
         Timestamp:   time.Now().Format(time.RFC3339),
     }
 
@@ -223,7 +224,7 @@ func storeBlob(filePath string) (string, error) {
     return hash, nil
 }
 
-func backToCommit(commitID string) error{
+func backToCommit(commitID string) error {
     commitsDir := filepath.Join(".gshot", "commits")
     if err := os.MkdirAll(commitsDir, 0755); err != nil {
         return err
@@ -236,10 +237,66 @@ func backToCommit(commitID string) error{
         _ = json.Unmarshal(data, &commits)
     }
 
-    if len(commits) > 0 {
+    var targetCommit *Commit 
 
+    // find commit (use index to get pointer to slice element)
+    for i := range commits {
+        if strconv.Itoa(commits[i].ID) == commitID {
+            targetCommit = &commits[i]
+            break
+        }
     }
+
+    if targetCommit == nil {
+        return fmt.Errorf("commit %s not found", commitID)
+    }
+
+    // ensure .gshot folder exists
+    if err := os.MkdirAll(".gshot", 0755); err != nil {
+        return err
+    }
+
+    // get files and overwrite
+    for _, fileHash := range targetCommit.FileHash {
+        if err := os.MkdirAll(filepath.Dir(fileHash.Path), 0755); err != nil {
+            log.Println("Failed to create dir:", err)
+            continue
+        }
+
+        srcPath := filepath.Join(".gshot/blobs/", fileHash.Hash)
+        if err := OverwriteOrCreate(srcPath, fileHash.Path); err != nil {
+            log.Println("Failed to overwrite file:", err)
+        }
+    }
+
     return nil
+}
+
+
+func OverwriteOrCreate(srcPath , dstPath string) error {
+    src, err := os.Open(srcPath)
+
+    if err != nil {
+        return err
+    }
+
+    defer src.Close()
+
+    dst , err := os.Create(dstPath)
+    
+    if err != nil {
+        return err
+    }
+
+    defer dst.Close()
+
+    _, err = io.Copy(dst,src)
+
+    if err != nil {
+        return err
+    }
+
+    return dst.Sync()
 }
 
 func main() {
@@ -263,16 +320,16 @@ func main() {
         }
 
         fh := FileHash{
-            FilePath: fullPath,
+            Path: fullPath,
             Hash:     hash,
         }
 
         filehash = append(filehash, fh)
-}   
+    }   
   
     commitMessage := flag.String("message", "", "commit message")
     showLog := flag.Bool("log", false, "show log message")  
-    backTo := flag.String("back_to", "", "back to a commit")  
+    backTo := flag.String("back-to", "", "back to a commit by id")  
 
     flag.Parse()
  
@@ -285,13 +342,12 @@ func main() {
         if err := commits(*commitMessage, filehash); err != nil {
             fmt.Println("Error creating commit:", err)
         }
-    } else {
-        fmt.Println("Please set a message for your commit with --message flag")
         return
-    }
+    }  
  
     if *backTo != "" {
-
+        backToCommit(*backTo)
+        return
     }
 
     if err := initRepository(); err != nil {
