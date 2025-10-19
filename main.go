@@ -13,7 +13,7 @@ import (
 )
 
 type FileHash struct {
-    FileName string `json:"filename"`
+    FilePath string `json:"filepath"`
     Hash     string `json:"hash"`
 }
 
@@ -223,6 +223,25 @@ func storeBlob(filePath string) (string, error) {
     return hash, nil
 }
 
+func backToCommit(commitID string) error{
+    commitsDir := filepath.Join(".gshot", "commits")
+    if err := os.MkdirAll(commitsDir, 0755); err != nil {
+        return err
+    }
+
+    commitFile := filepath.Join(commitsDir, "commits.json")
+
+    var commits []Commit
+    if data, err := os.ReadFile(commitFile); err == nil && len(data) > 0 {
+        _ = json.Unmarshal(data, &commits)
+    }
+
+    if len(commits) > 0 {
+
+    }
+    return nil
+}
+
 func main() {
     projectDir := "."
 
@@ -232,30 +251,34 @@ func main() {
     files, err := getAllFiles(projectDir, ignoreDirs, ignoreFiles)
     if err != nil {
         log.Fatal(err)
-    }
-
+    } 
+    
     var filehash []FileHash
     for _, f := range files {
-        hash, err := storeBlob(f)
-        if err != nil { 
+        fullPath := filepath.Join(projectDir, f)
+
+        hash, err := storeBlob(fullPath)
+        if err != nil {
             continue
         }
 
         fh := FileHash{
-            FileName: f,
-            Hash: hash,
+            FilePath: fullPath,
+            Hash:     hash,
         }
 
         filehash = append(filehash, fh)
-    }
+}   
   
     commitMessage := flag.String("message", "", "commit message")
     showLog := flag.Bool("log", false, "show log message")  
+    backTo := flag.String("back_to", "", "back to a commit")  
 
     flag.Parse()
  
     if *showLog {
         fmt.Println("📝 This is the log flag output")
+        return
     }
  
     if *commitMessage != "" {
@@ -267,6 +290,10 @@ func main() {
         return
     }
  
+    if *backTo != "" {
+
+    }
+
     if err := initRepository(); err != nil {
         fmt.Println("Error initializing repository:", err)
         os.Exit(1)
