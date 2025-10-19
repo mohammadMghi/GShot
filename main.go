@@ -3,6 +3,7 @@ package main
 import (
 	"crypto/sha256"
 	"encoding/json"
+	"flag"
 	"fmt"
 	"io"
 	"log"
@@ -230,7 +231,16 @@ func main() {
 		hashes = append(hashes, hash) 
     }
 
-	commits("this is first commit" ,hashes)
+    commitMessage := flag.String("message" , "" , "commit message")
+    
+    flag.Parse()
+
+    if *commitMessage != "" {
+        commits("this is first commit" ,hashes)
+    } else {
+        fmt.Println("Please set a message for your commit with --message flag")
+        return
+    }
 
     if err := initRepository(); err != nil {
         fmt.Println("Error initializing repository:", err)
