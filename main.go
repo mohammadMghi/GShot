@@ -30,6 +30,13 @@ func initRepository() error {
         "blobs",
         "branches",
     }
+
+    if _, err := os.Stat(vcsDir); err == nil {
+        // Directory exists, skip initialization
+        return nil
+    } else if !os.IsNotExist(err) { 
+        return err
+    }
  
     if err := os.MkdirAll(vcsDir, 0755); err != nil {
         return err
@@ -134,7 +141,7 @@ func commits(description string, hashes []string) error {
 
     // no files changed
     if len(hashes) <= 0 {
-        fmt.Println("No files changed")
+        fmt.Println("~ No files changed!")
         return nil
     }
 
@@ -205,7 +212,7 @@ func storeBlob(filePath string) (string, error) {
 func main() {
    	projectDir := "."  
 	
-	ignoreDirs := []string{".gshot", "node_modules"} 
+	ignoreDirs := []string{".gshot", "node_modules" , ".git"} 
     ignoreFiles := []string{"ignore.txt" , "main.go" , "go.mod"}
 
     files, err := getAllFiles(projectDir,ignoreDirs,ignoreFiles)
@@ -220,11 +227,8 @@ func main() {
 
 		if err != nil {
 
-		} 
-
-		hashes = append(hashes, hash)
-        fmt.Println(hash)
-        fmt.Println(f)
+		}  
+		hashes = append(hashes, hash) 
     }
 
 	commits("this is first commit" ,hashes)
