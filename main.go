@@ -10,6 +10,7 @@ import (
 	"os"
 	"path/filepath"
 	"strconv"
+	"strings"
 	"time"
 )
 
@@ -299,6 +300,36 @@ func OverwriteOrCreate(srcPath , dstPath string) error {
     return dst.Sync()
 }
 
+func printCommitsLog() {
+    commitsDir := filepath.Join(".gshot", "commits")
+    commitFile := filepath.Join(commitsDir, "commits.json")
+
+    var commits []Commit
+    if data, err := os.ReadFile(commitFile); err == nil && len(data) > 0 {
+        if err := json.Unmarshal(data, &commits); err != nil {
+            fmt.Println("❌ Failed to parse commits:", err)
+            return
+        }
+    }
+
+    if len(commits) == 0 {
+        fmt.Println("📭 No commits found.")
+        return
+    }
+
+    fmt.Println("📝 === Commit Log ===")
+    for i, commit := range commits {
+        fmt.Printf("\n✨ Commit #%d\n", i+1)
+        fmt.Println(strings.Repeat("─", 30))
+        fmt.Println("🗒️  Description:", commit.Description)
+        fmt.Println("⏰ Timestamp:  ", commit.Timestamp)
+        fmt.Println("🔗 Hashes:")
+        for _, hash := range commit.FileHash {
+            fmt.Println("  🟢", hash)
+        }
+    }
+}
+
 func main() {
     projectDir := "."
 
@@ -334,7 +365,7 @@ func main() {
     flag.Parse()
  
     if *showLog {
-        fmt.Println("📝 This is the log flag output")
+        printCommitsLog()
         return
     }
  
