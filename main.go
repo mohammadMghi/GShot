@@ -123,21 +123,23 @@ func commits(description string, hashes []string) error {
     }
  
     if len(commits) > 0 {
-        latestCommit := commits[len(commits)-1]
-
-        // create a map for quick lookup
-        existingHashes := make(map[string]struct{})
-        for _, h := range latestCommit.Hashes {
-            existingHashes[h] = struct{}{}
-        }
- 
-        filteredHashes := []string{}
-        for _, h := range hashes {
-            if _, exists := existingHashes[h]; !exists {
-                filteredHashes = append(filteredHashes, h)
+        for _,commit := range commits {
+           
+            // create a map for quick lookup
+            existingHashes := make(map[string]struct{})
+            for _, h := range commit.Hashes {
+                existingHashes[h] = struct{}{}
             }
+    
+            filteredHashes := []string{}
+            for _, h := range hashes {
+                if _, exists := existingHashes[h]; !exists {
+                    filteredHashes = append(filteredHashes, h)
+                }
+            }
+            hashes = filteredHashes
         }
-        hashes = filteredHashes
+       
     }
 
     // no files changed
@@ -218,38 +220,43 @@ func storeBlob(filePath string) (string, error) {
 }
 
 func main() {
-   	projectDir := "."  
-	
-	ignoreDirs := []string{".gshot", "node_modules" , ".git"} 
-    ignoreFiles := []string{"ignore.txt" , "main.go" , "go.mod"}
+    projectDir := "."
 
-    files, err := getAllFiles(projectDir,ignoreDirs,ignoreFiles)
+    ignoreDirs := []string{".gshot", "node_modules", ".git"}
+    ignoreFiles := []string{"ignore.txt", "main.go", "go.mod"}
+
+    files, err := getAllFiles(projectDir, ignoreDirs, ignoreFiles)
     if err != nil {
         log.Fatal(err)
     }
 
-	var hashes []string
- 
-	for _, f := range files {
-		hash,err := storeBlob(f)
-
-		if err != nil {
-
-		}  
-		hashes = append(hashes, hash) 
+    var hashes []string
+    for _, f := range files {
+        hash, err := storeBlob(f)
+        if err != nil { 
+            continue
+        }
+        hashes = append(hashes, hash)
     }
+ 
+    commitMessage := flag.String("message", "", "commit message")
+    showLog := flag.Bool("log", false, "show log message")  
 
-    commitMessage := flag.String("message" , "" , "commit message")
-    
     flag.Parse()
-
+ 
+    if *showLog {
+        fmt.Println("📝 This is the log flag output")
+    }
+ 
     if *commitMessage != "" {
-        commits(*commitMessage ,hashes)
+        if err := commits(*commitMessage, hashes); err != nil {
+            fmt.Println("Error creating commit:", err)
+        }
     } else {
         fmt.Println("Please set a message for your commit with --message flag")
         return
     }
-
+ 
     if err := initRepository(); err != nil {
         fmt.Println("Error initializing repository:", err)
         os.Exit(1)
