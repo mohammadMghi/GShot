@@ -31,8 +31,7 @@ func initRepository() error {
         "branches",
     }
 
-    if _, err := os.Stat(vcsDir); err == nil {
-        // Directory exists, skip initialization
+    if _, err := os.Stat(vcsDir); err == nil { 
         return nil
     } else if !os.IsNotExist(err) { 
         return err
@@ -59,7 +58,7 @@ func initRepository() error {
         return err
     }
 
-    fmt.Println("Initialized gshot! repository")
+    fmt.Println("Initialized Gshot! repository")
     return nil
 }
 
