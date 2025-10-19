@@ -12,10 +12,15 @@ import (
 	"time"
 )
 
+type FileHash struct {
+    FileName string `json:"filename"`
+    Hash     string `json:"hash"`
+}
+
 type Commit struct {
     ID int `json:"id"`
     Description string   `json:"description"`
-    Hashes      []string `json:"hashes"`
+    Hashes      []FileHash `json:"file_hash"`
     Timestamp   string   `json:"timestamp"`
 }
 
@@ -109,7 +114,7 @@ func hashFile(filePath string) (string, error) {
     return fmt.Sprintf("%x", hasher.Sum(nil)), nil
 }
 
-func commits(description string, hashes []string) error {
+func commits(description string, fileHashes []FileHash) error {
     commitsDir := filepath.Join(".gshot", "commits")
     if err := os.MkdirAll(commitsDir, 0755); err != nil {
         return err
@@ -121,29 +126,28 @@ func commits(description string, hashes []string) error {
     if data, err := os.ReadFile(commitFile); err == nil && len(data) > 0 {
         _ = json.Unmarshal(data, &commits)
     }
- 
-    if len(commits) > 0 {
-        for _,commit := range commits {
-           
-            // create a map for quick lookup
-            existingHashes := make(map[string]struct{})
-            for _, h := range commit.Hashes {
-                existingHashes[h] = struct{}{}
-            }
+
+    var filteredFileHashes []FileHash
     
-            filteredHashes := []string{}
-            for _, h := range hashes {
-                if _, exists := existingHashes[h]; !exists {
-                    filteredHashes = append(filteredHashes, h)
-                }
+    if len(commits) == 0 {
+        filteredFileHashes = fileHashes
+    } else { 
+        committed := make(map[string]struct{})
+        for _, commit := range commits {
+            for _, cf := range commit.Hashes { 
+                committed[cf.Hash] = struct{}{}
             }
-            hashes = filteredHashes
         }
-       
+ 
+        for _, fh := range fileHashes {
+            if _, exists := committed[fh.Hash]; !exists {
+                filteredFileHashes = append(filteredFileHashes, fh)
+            }
+        }
     }
 
     // no files changed
-    if len(hashes) <= 0 {
+    if len(filteredFileHashes) <= 0 {
         fmt.Println("~ No files changed!")
         return nil
     }
@@ -152,12 +156,12 @@ func commits(description string, hashes []string) error {
     if len(commits) > 0 {
         lastID := commits[len(commits) - 1].ID
         newID = lastID + 1
-    }
+    } 
 
     newCommit := Commit{
         ID : newID,
         Description: description,
-        Hashes:      hashes,
+        Hashes:      filteredFileHashes,
         Timestamp:   time.Now().Format(time.RFC3339),
     }
 
@@ -230,15 +234,21 @@ func main() {
         log.Fatal(err)
     }
 
-    var hashes []string
+    var filehash []FileHash
     for _, f := range files {
         hash, err := storeBlob(f)
         if err != nil { 
             continue
         }
-        hashes = append(hashes, hash)
+
+        fh := FileHash{
+            FileName: f,
+            Hash: hash,
+        }
+
+        filehash = append(filehash, fh)
     }
- 
+  
     commitMessage := flag.String("message", "", "commit message")
     showLog := flag.Bool("log", false, "show log message")  
 
@@ -249,7 +259,7 @@ func main() {
     }
  
     if *commitMessage != "" {
-        if err := commits(*commitMessage, hashes); err != nil {
+        if err := commits(*commitMessage, filehash); err != nil {
             fmt.Println("Error creating commit:", err)
         }
     } else {

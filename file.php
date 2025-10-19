@@ -2,5 +2,5 @@
 
 function hello()
 {
-   log(123222222222);
+   log(132);
 }
