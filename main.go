@@ -13,6 +13,7 @@ import (
 )
 
 type Commit struct {
+    ID int `json:"id"`
     Description string   `json:"description"`
     Hashes      []string `json:"hashes"`
     Timestamp   string   `json:"timestamp"`
@@ -145,7 +146,14 @@ func commits(description string, hashes []string) error {
         return nil
     }
 
+    newID := 1
+    if len(commits) > 0 {
+        lastID := commits[len(commits) - 1].ID
+        newID = lastID + 1
+    }
+
     newCommit := Commit{
+        ID : newID,
         Description: description,
         Hashes:      hashes,
         Timestamp:   time.Now().Format(time.RFC3339),
@@ -236,7 +244,7 @@ func main() {
     flag.Parse()
 
     if *commitMessage != "" {
-        commits("this is first commit" ,hashes)
+        commits(*commitMessage ,hashes)
     } else {
         fmt.Println("Please set a message for your commit with --message flag")
         return
