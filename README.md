@@ -17,7 +17,7 @@ Because we need to access the files by their SHA256. If one or more files change
 
 In code snipe ``` initRepository() ``` this function is represent for doing this.
 
-For commit something
+## Commit
 ```
   go main.go --message "commit message"
 ```
@@ -27,11 +27,12 @@ Checks if branch exists or not , if not it going to create a master branch
 
 It creates a hash behind the since and and allocated to a file and put generated file inside ```.ghost/blobs``` files then creating a commits.json and stores your commit with message inside it as a json.
 
+## Log
 If you need to see logs (commits):
 ```
   go main.go --logs
 ```
-
+## Change commit
 If you want to go backward and forward between your commits
 ```
   go main.go --back-to id
