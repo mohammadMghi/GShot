@@ -39,12 +39,7 @@ func initRepository() error {
         "blobs",
         "branches",
     }
-
-    if _, err := os.Stat(vcsDir); err == nil { 
-        return nil
-    } else if !os.IsNotExist(err) { 
-        return err
-    }
+ 
  
     if err := os.MkdirAll(vcsDir, 0755); err != nil {
         return err
@@ -57,15 +52,16 @@ func initRepository() error {
         }
     } 
 
-    headPath := filepath.Join(vcsDir, "HEAD")
-    if err := os.WriteFile(headPath, []byte("branches/master"), 0644); err != nil {
-        return err
-    }
+    createBranch("master" , true)
+    // headPath := filepath.Join(vcsDir, "HEAD")
+    // if err := os.WriteFile(headPath, []byte("branches/master"), 0644); err != nil {
+    //     return err
+    // }
  
-    masterBranch := filepath.Join(vcsDir, "branches", "master")
-    if err := os.WriteFile(masterBranch, []byte(""), 0644); err != nil {
-        return err
-    }
+    // masterBranch := filepath.Join(vcsDir, "branches", "master")
+    // if err := os.WriteFile(masterBranch, []byte(""), 0644); err != nil {
+    //     return err
+    // }
 
     fmt.Println("Initialized Gshot! repository")
     return nil
@@ -330,6 +326,55 @@ func printCommitsLog() {
     }
 }
 
+type Branch struct {
+    Name string `json:"name"`
+    IsHead bool `json:"is_head"`
+    Timestamp   string   `json:"timestamp"`
+}
+
+func createBranch(name string, isHead bool) error {
+    err := os.MkdirAll(".gshot/branches", os.ModePerm)
+    if err != nil {
+        return err
+    }
+ 
+    file, err := os.Create(".gshot/branches/branches.json")
+    if err != nil {
+        return err
+    }
+ 
+
+    if err != nil {
+        return err
+    }
+
+    defer file.Close() 
+
+    var branches []Branch
+
+    branch := Branch{
+        Name: name,
+        IsHead: isHead,
+        Timestamp: time.Now().Format(time.RFC3339),
+    }
+
+    branches = append(branches, branch)
+
+    branchData,err := json.MarshalIndent(branches , "" , "  ")
+
+    if err != nil {
+        return err
+    }
+
+    _,err = file.Write([]byte(branchData))
+
+    if err != nil {
+        return err
+    }
+
+    return nil
+}
+
 func main() {
     projectDir := "."
 
@@ -360,10 +405,20 @@ func main() {
   
     commitMessage := flag.String("message", "", "commit message")
     showLog := flag.Bool("log", false, "show log message")  
+    init := flag.Bool("init", false, "init")  
     backTo := flag.String("back-to", "", "back to a commit by id")  
-
+    branch := flag.String("branch", "", "create branch")  
     flag.Parse()
  
+
+    if *init {
+        if err := initRepository(); err != nil {
+            fmt.Println("Error initializing repository:", err)
+            os.Exit(1)
+        }
+        return
+    }
+     
     if *showLog {
         printCommitsLog()
         return
@@ -381,8 +436,13 @@ func main() {
         return
     }
 
-    if err := initRepository(); err != nil {
-        fmt.Println("Error initializing repository:", err)
-        os.Exit(1)
+    if *branch != "" {
+        err = createBranch(*branch , true)
+
+        if err != nil {
+            fmt.Println("Create branch err:", err)
+        }
+
+        return
     }
 }
