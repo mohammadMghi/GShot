@@ -15,7 +15,7 @@ Because we need to access the files by their SHA256. If one or more files change
 
 ### code documentation
 
-In code snipe ``` initRepository() ``` this function is represent for doing this.
+``` initRepository() ``` this a function is represent for doing this.
 
 ## Commit
 ```
