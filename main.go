@@ -387,34 +387,9 @@ func checkFileOrDirExist(file string,dir string) bool {
 }
 
 func main() {
-    projectDir := "."
-
-    ignoreDirs := []string{".gshot", "node_modules", ".git"}
-    ignoreFiles := []string{"ignore.txt", "main.go", "go.mod"}
-
-    files, err := getAllFiles(projectDir, ignoreDirs, ignoreFiles)
-    if err != nil {
-        log.Fatal(err)
-    } 
     
-    var filehash []FileHash
-    for _, f := range files {
-        fullPath := filepath.Join(projectDir, f)
-
-        hash, err := storeBlob(fullPath)
-        if err != nil {
-            continue
-        }
-
-        fh := FileHash{
-            Path: fullPath,
-            Hash:     hash,
-        }
-
-        filehash = append(filehash, fh)
-    }   
   
-    commitMessage := flag.String("message", "", "commit message")
+    commitMessage := flag.String("commit", "", "commit")
     showLog := flag.Bool("log", false, "show log message")  
     init := flag.Bool("init", false, "init")  
     backTo := flag.String("back-to", "", "back to a commit by id")  
@@ -441,6 +416,33 @@ func main() {
             Name: "master",
         }
 
+        projectDir := "."
+
+        ignoreDirs := []string{".gshot", "node_modules", ".git"}
+        ignoreFiles := []string{"ignore.txt", "main.go", "go.mod"}
+
+        files, err := getAllFiles(projectDir, ignoreDirs, ignoreFiles)
+        if err != nil {
+            log.Fatal(err)
+        } 
+        
+        var filehash []FileHash
+        for _, f := range files {
+            fullPath := filepath.Join(projectDir, f)
+
+            hash, err := storeBlob(fullPath)
+            if err != nil {
+                continue
+            }
+
+            fh := FileHash{
+                Path: fullPath,
+                Hash:     hash,
+            }
+
+            filehash = append(filehash, fh)
+        }   
+
         if err := commits(branch,*commitMessage, filehash); err != nil {
             fmt.Println("Error creating commit:", err)
         }
@@ -453,7 +455,7 @@ func main() {
     }
 
     if *branch != "" {
-        err = createBranch(*branch , true)
+        err := createBranch(*branch , true)
         if err != nil {
             fmt.Println("Create branch err:", err)
         }
