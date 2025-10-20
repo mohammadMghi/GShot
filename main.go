@@ -23,6 +23,7 @@ type Commit struct {
     ID int `json:"id"`
     Description string   `json:"description"`
     FileHash      []FileHash `json:"file_hash"`
+    Branch Branch `json:"branch"` 
     Timestamp   string   `json:"timestamp"`
 }
 
@@ -52,16 +53,13 @@ func initRepository() error {
         }
     } 
 
-    createBranch("master" , true)
-    // headPath := filepath.Join(vcsDir, "HEAD")
-    // if err := os.WriteFile(headPath, []byte("branches/master"), 0644); err != nil {
-    //     return err
-    // }
- 
-    // masterBranch := filepath.Join(vcsDir, "branches", "master")
-    // if err := os.WriteFile(masterBranch, []byte(""), 0644); err != nil {
-    //     return err
-    // }
+    // if branch not exist it creates master branch
+    if !checkFileOrDirExist(".gshot/branches" , "branches.json") {
+        if err := createBranch("master" , true) ; err == nil {
+            return err
+        }
+    } 
+
 
     fmt.Println("Initialized Gshot! repository")
     return nil
@@ -112,7 +110,7 @@ func hashFile(filePath string) (string, error) {
     return fmt.Sprintf("%x", hasher.Sum(nil)), nil
 }
 
-func commits(description string, fileHashes []FileHash) error {
+func commits(branch Branch,description string, fileHashes []FileHash) error {
     commitsDir := filepath.Join(".gshot", "commits")
     if err := os.MkdirAll(commitsDir, 0755); err != nil {
         return err
@@ -161,6 +159,7 @@ func commits(description string, fileHashes []FileHash) error {
         Description: description,
         FileHash:      filteredFileHashes,
         Timestamp:   time.Now().Format(time.RFC3339),
+        Branch: branch,
     }
 
     commits = append(commits, newCommit)
@@ -375,6 +374,18 @@ func createBranch(name string, isHead bool) error {
     return nil
 }
 
+func checkFileOrDirExist(file string,dir string) bool {
+    if info, err := os.Stat(file) ; err == nil && !info.IsDir() {
+        return true
+    }
+
+    if info, err := os.Stat(dir); err == nil && info.IsDir() {
+        return true
+    }
+
+    return false
+}
+
 func main() {
     projectDir := "."
 
@@ -425,7 +436,12 @@ func main() {
     }
  
     if *commitMessage != "" {
-        if err := commits(*commitMessage, filehash); err != nil {
+        //Checks branch exists or not
+        branch := Branch{
+            Name: "master",
+        }
+
+        if err := commits(branch,*commitMessage, filehash); err != nil {
             fmt.Println("Error creating commit:", err)
         }
         return
@@ -438,7 +454,6 @@ func main() {
 
     if *branch != "" {
         err = createBranch(*branch , true)
-
         if err != nil {
             fmt.Println("Create branch err:", err)
         }
