@@ -7,7 +7,11 @@ You can clone it out of the box and run the following instruction:
 ```
   go main.go --init
 ```
-This command create .gshot inside root directory
+This command creates a .gshot directory inside the root directory. It contains blobs, branches, and commits.
+What are blobs?
+They are the storage of files. After encrypting and calculating the SHA256, we store the file with its SHA256 name inside blobs.
+Why do this?
+Because we need to access the files by their SHA256. If one or more files change, we create new commits and compare them with the last SHA256. If a file stays the same and nothing changes inside it, the SHA256 remains the same as the previous one, so we don't need to store new files inside blobs or change any commit in .gshot/commits/commits.json. But if something changes inside our files, we have to calculate the SHA256 again and store a new commit inside commits.json.
 
 ### code documentation
 
