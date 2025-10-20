@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bufio"
 	"crypto/sha256"
 	"encoding/json"
 	"flag"
@@ -52,6 +53,11 @@ func initRepository() error {
             return err
         }
     } 
+
+    // for ignore file and dirs in commits
+    if !checkFileExist("./.gshotignore") {
+        createFile("./.gshotignore")
+    }
 
     // if branch not exist it creates master branch
     if !checkFileOrDirExist(".gshot/branches" , "branches.json") {
@@ -374,6 +380,17 @@ func createBranch(name string, isHead bool) error {
     return nil
 }
 
+func createFile(filename string) error {
+    // Check if file already exists
+ 
+    file, err := os.Create(filename)
+    if err != nil {
+        return err
+    }
+    defer file.Close()
+    return nil
+}
+
 func checkFileOrDirExist(file string,dir string) bool {
     if info, err := os.Stat(file) ; err == nil && !info.IsDir() {
         return true
@@ -386,9 +403,59 @@ func checkFileOrDirExist(file string,dir string) bool {
     return false
 }
 
-func main() {
-    
-  
+func checkFileExist(file string) bool {
+    if info, err := os.Stat(file) ; err == nil && !info.IsDir() {
+        return true
+    } 
+
+    return false
+}
+
+func isFile(path string) (bool , error) {
+    info, err := os.Stat(path)
+    if os.IsNotExist(err) {
+        fmt.Printf("%s does not exist\n", path)
+        return false , err
+    }
+    if err != nil {
+        fmt.Println("Error:", err)
+        return false , err
+    }
+
+    if info.IsDir() {
+        return true , nil
+    } else {
+        return false , nil
+    }
+}
+ 
+
+func ignoreDirsAndFiles()(files []string,dirs []string,err error) {
+    file, err := os.Open("./.gshotignore")
+    if err != nil {
+        return nil,nil,err
+    }
+    defer file.Close()
+ 
+    scanner := bufio.NewScanner(file)
+
+    for scanner.Scan() {
+        line := scanner.Text()
+        if isfile , err := isFile(line); isfile  && err == nil {
+            files = append(files, line)
+        } else {
+            dirs = append(dirs, line)
+        }
+    }
+
+    if err := scanner.Err(); err != nil {
+        return nil,nil, err
+    }
+
+    return files, dirs,nil
+}
+
+func main() {  
     commitMessage := flag.String("commit", "", "commit")
     showLog := flag.Bool("log", false, "show log message")  
     init := flag.Bool("init", false, "init")  
@@ -418,9 +485,8 @@ func main() {
 
         projectDir := "."
 
-        ignoreDirs := []string{".gshot", "node_modules", ".git"}
-        ignoreFiles := []string{"ignore.txt", "main.go", "go.mod"}
-
+        ignoreDirs , ignoreFiles , err := ignoreDirsAndFiles()
+   
         files, err := getAllFiles(projectDir, ignoreDirs, ignoreFiles)
         if err != nil {
             log.Fatal(err)
