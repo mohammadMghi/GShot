@@ -5,7 +5,7 @@ You can clone it out of the box and run the following instruction:
 
 ## Init
 ```
-  go main.go --init
+  go run main.go --init
 ```
 This command creates a .gshot directory inside the root directory. It contains blobs, branches, and commits.
 What are blobs?
@@ -19,7 +19,7 @@ Because we need to access the files by their SHA256. If one or more files change
 
 ## Commit
 ```
-  go main.go --message "commit message"
+  go run main.go --commit "commit message"
 ```
 ### code documentation
 Checks if branch exists or not , if not it going to create a master branch
@@ -30,11 +30,11 @@ It creates a hash behind the since and and allocated to a file and put generated
 ## Log
 If you need to see logs (commits):
 ```
-  go main.go --logs
+  go run main.go --logs
 ```
 ## Change commit
 If you want to go backward and forward between your commits
 ```
-  go main.go --back-to id
+  go run main.go --back-to id
 ```
 
